@@ -1,3 +1,2 @@
-
 # genai-assignments
 
