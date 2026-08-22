@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moderation Control Room</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="./index.html" aria-label="Moderation Control Room home">
+        <span class="brand-mark">M</span>
+        <span><strong>Moderation</strong><small>CONTROL ROOM</small></span>
+      </a>
+      <div class="service-status"><span class="status-dot" id="serviceDot"></span><span id="serviceStatus">API READY</span><span class="environment-badge">LOCAL</span></div>
+    </header>
+
+    <section class="intro">
+      <div>
+        <p class="eyebrow">Policy evaluation workspace</p>
+        <h1>Inspect the message<br><em>before it moves.</em></h1>
+      </div>
+      <p class="intro-copy">Run a focused classification check or the complete moderation policy against a single input.</p>
+    </section>
+
+    <section class="workspace" aria-label="Moderation workspace">
+      <form class="input-panel" id="moderationForm">
+        <div class="panel-heading"><div><span class="step">01</span><h2>Input payload</h2></div><span class="live-label">LIVE CHECK</span></div>
+        <label class="field-label" for="content">Message or description</label>
+        <textarea id="content" name="content" placeholder="Paste a message, prompt, or system description here..." required>Contact alice@example.com and use key AKIA12345</textarea>
+        <div class="input-meta"><span id="characterCount">0 characters</span><span>Plain text</span></div>
+
+        <div class="controls-row">
+          <div class="control-group">
+            <label class="field-label" for="classification">Classification</label>
+            <select id="classification" name="classification">
+              <option value="CII">CII / Confidential information</option>
+              <option value="PII">PII / Personal information</option>
+              <option value="SECRETS">Secrets / Credentials</option>
+              <option value="MASKING">MASKING / Transformed output</option>
+            </select>
+          </div>
+          <div class="control-group toggle-group">
+            <span class="field-label">Decision control</span>
+            <label class="switch-label"><input id="moderationEnabled" type="checkbox" checked><span class="switch" aria-hidden="true"></span><span id="toggleText">MASK ON</span></label>
+            <span class="control-hint" id="decisionHint">Sensitive matches will be masked</span>
+          </div>
+        </div>
+        <button class="run-button" id="runButton" type="submit"><span>Run evaluation</span><span class="button-arrow">-></span></button>
+        <label class="api-field" for="apiBase"><span>API base URL</span><input id="apiBase" type="url" value="http://localhost:3000" spellcheck="false"></label>
+      </form>
+
+      <section class="output-panel" aria-live="polite">
+        <div class="panel-heading"><div><span class="step">02</span><h2>Decision output</h2></div><span class="response-time" id="responseTime">WAITING</span></div>
+        <div class="empty-state" id="emptyState"><div class="empty-icon">+</div><h3>Ready for inspection</h3><p>Your evaluated decision and findings will appear here.</p></div>
+        <div class="result-state" id="resultState" hidden>
+          <div class="decision-banner" id="decisionBanner"><span class="decision-kicker">DECISION</span><strong id="decisionValue">ALLOW</strong><span id="decisionDescription">No restriction detected.</span></div>
+          <div class="result-grid"><div><span class="result-label">Classification</span><strong id="resultClassification">-</strong></div><div><span class="result-label">Signal</span><strong id="resultSignal">-</strong></div><div><span class="result-label">Request ID</span><strong class="request-id" id="requestId">-</strong></div></div>
+          <div class="content-result"><div class="content-heading"><div class="result-label">Returned content</div><span id="contentStatus">PENDING</span></div><pre id="returnedContent">-</pre></div>
+          <details class="findings"><summary><span>Findings</span><span id="findingCount">0</span></summary><div id="findingList"></div></details>
+          <details class="raw-response"><summary>Raw response</summary><pre id="rawResponse"></pre></details>
+        </div>
+        <div class="error-state" id="errorState" hidden><span class="error-icon">!</span><div><h3>Evaluation unavailable</h3><p id="errorMessage">Check that the moderation API is running and the base URL is correct.</p></div></div>
+      </section>
+    </section>
+    <footer><span>MODERATION LAYER</span><span>Phase 1 API surface</span><span id="lastRun">No evaluations this session</span></footer>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

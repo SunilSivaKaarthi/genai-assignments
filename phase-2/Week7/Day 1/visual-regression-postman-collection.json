@@ -1,0 +1,260 @@
+{
+  "info": {
+    "name": "Visual Regression API",
+    "description": "Collection for validating the visual regression backend endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "ba0d5bef-fec9-4b25-9a3a-8592b91c7f35"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "replace_with_job_id",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/config",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "config"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Provider Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/providers/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "providers",
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload Images",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "images",
+              "type": "file",
+              "src": [],
+              "description": "Upload one or two image files (PNG, JPG, JPEG, WEBP)"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/uploads",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "uploads"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Current Sprint Validation",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Single screenshot for current-sprint validation"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/validation/current-sprint",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "validation",
+            "current-sprint"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Regression Validation",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "baseline",
+              "type": "file",
+              "src": [],
+              "description": "Baseline image"
+            },
+            {
+              "key": "current",
+              "type": "file",
+              "src": [],
+              "description": "Current image"
+            },
+            {
+              "key": "mode",
+              "value": "hybrid",
+              "type": "text",
+              "description": "Allowed values: pixel, text, hybrid"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/validation/regression",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "validation",
+            "regression"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Job By ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/validation/jobs/{{jobId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "validation",
+            "jobs",
+            "{{jobId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Job Result",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/validation/jobs/{{jobId}}/result",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "validation",
+            "jobs",
+            "{{jobId}}",
+            "result"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Download Report HTML",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/validation/jobs/{{jobId}}/report/html",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "validation",
+            "jobs",
+            "{{jobId}}",
+            "report",
+            "html"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Retry Job",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/validation/jobs/{{jobId}}/retry",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "validation",
+            "jobs",
+            "{{jobId}}",
+            "retry"
+          ]
+        }
+      }
+    }
+  ]
+}
