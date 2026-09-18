@@ -1,0 +1,232 @@
+{
+  "info": {
+    "name": "Swagger AI Agent Backend Verification",
+    "description": "Smoke and contract verification collection for the Swagger AI Agent backend. Run requests in order. The collection stores specId, envId, and runId automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "specUrl", "value": "https://petstore.swagger.io/v2/swagger.json" },
+    { "key": "environmentName", "value": "qa" },
+    { "key": "environmentBaseUrl", "value": "https://petstore.swagger.io/v2" },
+    { "key": "specId", "value": "" },
+    { "key": "envId", "value": "" },
+    { "key": "runId", "value": "" },
+    { "key": "operationId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Health",
+      "item": [
+        {
+          "name": "Root service information",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Root identifies the backend', function () { pm.expect(pm.response.json().status).to.eql('ok'); });"] } }]
+        },
+        {
+          "name": "Health",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/health" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Backend is healthy', function () { pm.expect(pm.response.json().status).to.eql('ok'); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Spec APIs",
+      "item": [
+        {
+          "name": "Import OpenAPI specification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"source\": {\n    \"type\": \"url\",\n    \"url\": \"{{specUrl}}\"\n  }\n}" },
+            "url": "{{baseUrl}}/spec/import"
+          },
+            "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "pm.test('Import returned spec metadata', function () { pm.expect(body.specId).to.be.a('string').and.not.empty; pm.expect(body.operationCount).to.be.above(0); });", "pm.collectionVariables.set('specId', body.specId);"] } }]
+        },
+        {
+          "name": "Validate raw specification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"spec\": {\n    \"openapi\": \"3.0.3\",\n    \"info\": { \"title\": \"Smoke API\", \"version\": \"1.0.0\" },\n    \"paths\": {}\n  }\n}" },
+            "url": "{{baseUrl}}/spec/validate"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Specification is valid', function () { pm.expect(pm.response.json().valid).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Get spec metadata",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/spec/{{specId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Metadata contains operation count', function () { pm.expect(pm.response.json().operationCount).to.be.above(0); });"] } }]
+        },
+        {
+          "name": "List operations",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/spec/{{specId}}/operations" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "const operations = pm.response.json();", "pm.test('Operations are normalized', function () { pm.expect(operations).to.be.an('array').and.not.empty; pm.expect(operations[0]).to.have.property('operationId'); });", "const smokeOperation = operations.find(function (operation) { return operation.operationId === 'getInventory'; }) || operations.find(function (operation) { return operation.method === 'GET' && !operation.path.includes('{'); }) || operations[0];", "pm.collectionVariables.set('operationId', smokeOperation.operationId);"] } }]
+        },
+        {
+          "name": "List tags",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/spec/{{specId}}/tags" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Tags are returned', function () { pm.expect(pm.response.json()).to.be.an('array'); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Environment APIs",
+      "item": [
+        {
+          "name": "Create environment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"specId\": \"{{specId}}\",\n  \"name\": \"{{environmentName}}\",\n  \"baseUrl\": \"{{environmentBaseUrl}}\",\n  \"defaultHeaders\": {\n    \"Accept\": \"application/json\"\n  },\n  \"authConfig\": {}\n}" },
+            "url": "{{baseUrl}}/environment"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "pm.test('Environment ID returned', function () { pm.expect(body.id).to.be.a('string').and.not.empty; });", "pm.collectionVariables.set('envId', body.id);"] } }]
+        },
+        {
+          "name": "List environments",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/spec/{{specId}}/environments" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Environment is listed', function () { pm.expect(pm.response.json().some(function (item) { return item.id === pm.collectionVariables.get('envId'); })).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Get environment",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/environment/{{envId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Environment has base URL', function () { pm.expect(pm.response.json().baseUrl).to.be.a('string').and.not.empty; });"] } }]
+        },
+        {
+          "name": "Update environment",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"defaultHeaders\": {\n    \"Accept\": \"application/json\",\n    \"X-Smoke-Test\": \"updated\"\n  }\n}" },
+            "url": "{{baseUrl}}/environment/{{envId}}"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Environment updated', function () { pm.expect(pm.response.json().defaultHeaders['X-Smoke-Test']).to.eql('updated'); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 - Execution APIs",
+      "item": [
+        {
+          "name": "Plan full run",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"specId\": \"{{specId}}\",\n  \"envName\": \"{{environmentName}}\",\n  \"selection\": { \"mode\": \"single\", \"operationId\": \"{{operationId}}\" }\n}" },
+            "url": "{{baseUrl}}/execution/plan"
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "exec": ["const specId = pm.collectionVariables.get('specId');", "if (!specId) { throw new Error('No specId found. Run 02 - Spec APIs > Import OpenAPI specification first.'); }", "const envId = pm.collectionVariables.get('envId');", "if (!envId) {", "  pm.sendRequest({ url: pm.variables.replaceIn('{{baseUrl}}') + '/environment', method: 'POST', header: { 'Content-Type': 'application/json' }, body: { mode: 'raw', raw: JSON.stringify({ specId: specId, name: pm.variables.replaceIn('{{environmentName}}'), baseUrl: pm.variables.replaceIn('{{environmentBaseUrl}}'), defaultHeaders: { Accept: 'application/json' }, authConfig: {} }) } }, function (error, response) {", "    if (error || response.code < 200 || response.code >= 300) { throw new Error('Environment setup failed. Run 03 - Environment APIs in order.'); }", "    pm.collectionVariables.set('envId', response.json().id);", "  });", "}"] } },
+            { "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "pm.test('Run plan created', function () { pm.expect(body.runId).to.be.a('string').and.not.empty; pm.expect(body.testCount).to.be.above(0); });", "pm.collectionVariables.set('runId', body.runId);"] } }
+          ]
+        },
+        {
+          "name": "Execute run",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"runId\": \"{{runId}}\" }" },
+            "url": "{{baseUrl}}/execution/run"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Execution summary returned', function () { pm.expect(pm.response.json().summary).to.be.an('object'); });"] } }]
+        },
+        {
+          "name": "Get run status",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/execution/status/{{runId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Run report returned', function () { pm.expect(pm.response.json().runId).to.eql(pm.collectionVariables.get('runId')); });"] } }]
+        },
+        {
+          "name": "Retry failed tests endpoint",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"runId\": \"{{runId}}\" }" },
+            "url": "{{baseUrl}}/execution/retry-failed"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Retry response returned', function () { pm.expect(pm.response.json()).to.have.property('retried'); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "05 - Test Generation APIs",
+      "item": [
+        {
+          "name": "Generate Axios Jest tests",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"specId\": \"{{specId}}\",\n  \"selection\": { \"mode\": \"single\", \"operationId\": \"{{operationId}}\" },\n  \"options\": { \"includeNegativeTests\": true, \"includeAuthTests\": true, \"includeBoundaryTests\": true }\n}" },
+            "url": "{{baseUrl}}/testgen/generate-axios-tests"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Generated code returned', function () { pm.expect(pm.response.json().code).to.be.a('string').and.include('describe'); });"] } }]
+        },
+        {
+          "name": "Preview generated tests",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/testgen/spec/{{specId}}/preview" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Preview code returned', function () { pm.expect(pm.response.json().code).to.be.a('string'); });"] } }]
+        },
+        {
+          "name": "Build payload from schema",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\", \"operationId\": \"{{operationId}}\" }" }, "url": "{{baseUrl}}/llm/build-payload" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Payload provider returned', function () { pm.expect(pm.response.json().provider).to.eql('schema-fallback'); });"] } }]
+        },
+        {
+          "name": "Suggest additional tests",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\", \"operationId\": \"{{operationId}}\" }" }, "url": "{{baseUrl}}/llm/suggest-tests" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Test suggestions returned', function () { pm.expect(pm.response.json().suggestions).to.be.an('array'); });"] } }]
+        },
+        {
+          "name": "Generate BDD artifacts",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\" }" }, "url": "{{baseUrl}}/testgen/generate-bdd" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('BDD feature returned', function () { pm.expect(pm.response.json().feature).to.include('Feature:'); });"] } }]
+        },
+        {
+          "name": "Generate TypeScript DTO",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\" }" }, "url": "{{baseUrl}}/testgen/generate-dto" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('DTO code returned', function () { pm.expect(pm.response.json().code).to.include('interface'); });"] } }]
+        },
+        {
+          "name": "Generate Postman collection",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\" }" }, "url": "{{baseUrl}}/testgen/generate-postman" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('Postman items returned', function () { pm.expect(pm.response.json().item).to.be.an('array').and.not.empty; });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "06 - MCP APIs",
+      "item": [
+        {
+          "name": "MCP list operations",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\" }" }, "url": "{{baseUrl}}/mcp/swagger/list-operations" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('MCP operations returned', function () { pm.expect(pm.response.json()).to.be.an('array').and.not.empty; });"] } }]
+        },
+        {
+          "name": "MCP plan run",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\", \"envName\": \"{{environmentName}}\", \"selection\": { \"mode\": \"single\", \"operationId\": \"{{operationId}}\" } }" }, "url": "{{baseUrl}}/mcp/swagger/plan-run" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('MCP plan summary returned', function () { pm.expect(pm.response.json().summary).to.have.property('operationCount'); });"] } }]
+        },
+        {
+          "name": "MCP generate Axios tests",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\", \"selection\": { \"mode\": \"single\", \"operationId\": \"{{operationId}}\" } }" }, "url": "{{baseUrl}}/mcp/swagger/generate-axios-tests" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('MCP generated code returned', function () { pm.expect(pm.response.json().code).to.be.a('string'); });"] } }]
+        },
+        {
+          "name": "MCP execute operation",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"specId\": \"{{specId}}\", \"envName\": \"{{environmentName}}\", \"operationId\": \"{{operationId}}\" }" }, "url": "{{baseUrl}}/mcp/swagger/execute-operation" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('MCP execution report returned', function () { pm.expect(pm.response.json()).to.have.property('summary'); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "07 - Cleanup",
+      "item": [
+        {
+          "name": "Verify qa environment remains available",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/environment/{{envId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 200', function () { pm.response.to.have.status(200); });", "pm.test('QA environment remains available', function () { pm.expect(pm.response.json().name).to.eql(pm.variables.replaceIn('{{environmentName}}')); });"] } }]
+        }
+      ]
+    }
+  ]
+}
